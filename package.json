@@ -1,15 +1,21 @@
 {
   "name": "task-manager",
   "productName": "업무관리",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "개인 업무 체크리스트 데스크톱 프로그램",
   "main": "main.js",
   "private": true,
+  "author": "dzap12312-droid",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dzap12312-droid/task-manager.git"
+  },
   "scripts": {
     "start": "electron .",
     "test": "node --test test/*.test.js",
     "test:e2e": "playwright test",
-    "dist": "electron-builder",
+    "dist": "electron-builder --publish never",
     "screenshots": "node scripts/screenshots.js"
   },
   "devDependencies": {
@@ -52,10 +58,11 @@
       "createStartMenuShortcut": true,
       "shortcutName": "업무관리",
       "deleteAppDataOnUninstall": false,
-      "artifactName": "업무관리 Setup ${version}.exe"
+      "artifactName": "TaskManager-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "업무관리 ${version} Portable.exe"
-    }
+      "artifactName": "TaskManager-${version}-Portable.${ext}"
+    },
+    "publish": null
   }
 }

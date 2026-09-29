@@ -1,0 +1,72 @@
+name: Release
+
+# v* 태그를 push하면 Windows에서 테스트 → 빌드 → GitHub Release에 설치형·포터블 exe 첨부.
+# 실패한 태그를 다시 빌드할 때는 Actions 탭 → Release → Run workflow 에서 태그 이름을 넣어 실행.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '다시 빌드할 태그 (예: v1.2.0)'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: npm ci
+        run: npm ci
+
+      - name: npm test
+        run: npm test
+
+      - name: npm run dist
+        run: npm run dist
+
+      - name: List build output
+        shell: bash
+        run: ls -la dist
+
+      - name: Upload to GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          shopt -s nullglob
+          files=(dist/TaskManager-*.exe)
+          if [ "${#files[@]}" -lt 2 ]; then
+            echo "설치형/포터블 exe를 찾지 못했습니다: ${files[*]:-없음}"
+            exit 1
+          fi
+          # README의 CHANGELOG에서 이 버전 항목만 뽑아 릴리스 노트로 사용
+          awk -v head="### v${VERSION}" 'index($0, head) == 1 { f = 1; next } /^### / { f = 0 } /^## / { f = 0 } f' README.md > release-notes.md
+          if [ ! -s release-notes.md ]; then echo "업무관리 ${TAG}" > release-notes.md; fi
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" --clobber
+          else
+            gh release create "$TAG" "${files[@]}" --title "업무관리 ${TAG}" --notes-file release-notes.md
+          fi
+          gh release view "$TAG"
