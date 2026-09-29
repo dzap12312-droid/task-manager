@@ -61,6 +61,16 @@ jobs:
       - name: npm run dist
         run: npm run dist
 
+      - name: Changed-files zip (since v1.1 upload)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # 저장소 첫 커밋 = v1.1 원본 업로드. 그 뒤로 추가·변경된 파일만 묶는다.
+          BASE=$(git rev-list --max-parents=0 HEAD | tail -1)
+          git diff --name-only --diff-filter=ACMR "$BASE" HEAD > changed-files.txt
+          git archive --format=zip -o "dist/TaskManager-${TAG#v}-changes-since-v1.1.zip" HEAD -- $(cat changed-files.txt)
+          echo "$(wc -l < changed-files.txt) files"
+
       - name: List build output
         shell: bash
         run: ls -la dist
@@ -73,9 +83,10 @@ jobs:
           set -euo pipefail
           VERSION="${TAG#v}"
           shopt -s nullglob
-          files=(dist/TaskManager-*.exe)
-          if [ "${#files[@]}" -lt 2 ]; then
-            echo "설치형/포터블 exe를 찾지 못했습니다: ${files[*]:-없음}"
+          exes=(dist/TaskManager-*.exe)
+          files=("${exes[@]}" dist/TaskManager-*.zip)
+          if [ "${#exes[@]}" -lt 2 ]; then
+            echo "설치형/포터블 exe를 찾지 못했습니다: ${exes[*]:-없음}"
             exit 1
           fi
           # README의 CHANGELOG에서 이 버전 항목만 뽑아 릴리스 노트로 사용
