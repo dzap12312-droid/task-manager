@@ -1,0 +1,50 @@
+{
+  "name": "task-manager",
+  "productName": "업무관리",
+  "version": "1.0.0",
+  "description": "개인 업무 체크리스트 데스크톱 프로그램",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "test:e2e": "playwright test test/e2e.spec.js",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3",
+    "@playwright/test": "1.63.0"
+  },
+  "build": {
+    "appId": "com.taeyeon.taskmanager",
+    "productName": "업무관리",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "업무관리",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "업무관리 Setup ${version}.exe"
+    },
+    "portable": {
+      "artifactName": "업무관리 ${version} Portable.exe"
+    }
+  }
+}
