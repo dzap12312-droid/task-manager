@@ -75,6 +75,17 @@ jobs:
         shell: bash
         run: ls -la dist
 
+      # Release 업로드가 실패해도 이 실행 페이지(Artifacts)에서 exe를 받을 수 있게 먼저 보관
+      - name: Keep build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TaskManager-${{ env.TAG }}
+          path: |
+            dist/TaskManager-*.exe
+            dist/TaskManager-*.zip
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Upload to GitHub Release
         shell: bash
         env:
