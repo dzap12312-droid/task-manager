@@ -137,6 +137,8 @@ npm run dist           # dist\TaskManager-Setup-<버전>.exe, dist\TaskManager-<
 
 `package.json`의 `version`을 올리고 README의 CHANGELOG에 `### v<버전>` 항목을 추가한 뒤 `v<버전>` 태그를 push하면, GitHub Actions(`.github/workflows/release.yml`)가 Windows에서 `npm ci → npm test → npm run dist`를 실행하고 두 exe를 Release에 첨부합니다. 릴리스 노트는 CHANGELOG의 해당 버전 항목에서 가져옵니다.
 
+태그를 직접 push할 수 없는 환경이면 GitHub의 **Actions → Release → Run workflow**에서 태그 이름(예: `v1.2.0`)을 입력해 실행하세요. 태그가 없으면 선택한 브랜치의 최신 커밋에 태그와 Release를 만들어 주고, 이미 있으면 그 태그를 다시 빌드해 exe를 교체합니다. `package.json`의 버전과 태그가 다르면 빌드를 멈춥니다.
+
 > `productName`(`업무관리`)과 `build.appId`는 바꾸지 마세요. 데이터 폴더(`%APPDATA%\업무관리`)와 설치 정보가 여기에 묶여 있어, 바꾸면 기존 데이터가 보이지 않거나 프로그램이 두 번 설치됩니다.
 
 ### 폴더 구조
