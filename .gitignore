@@ -1,2 +1,16 @@
 node_modules/
 dist/
+test-results/
+playwright-report/
+
+# 개인 업무 데이터 / 실행 중 생성 파일
+tasks.json
+tasks.json.tmp
+settings.json
+backups/
+data/
+*.broken-*.json
+window-state.json
+
+# v1.1 원본 백업(로컬 보관용)
+_backup*/

@@ -1,0 +1,210 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Malgun Gothic", sans-serif;
+  margin: 16px;
+  color: #222;
+}
+
+h1 {
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+
+.add-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.add-form input {
+  padding: 6px 8px;
+  font-size: 14px;
+  border: 1px solid #999;
+  border-radius: 4px;
+}
+
+#assignee-input {
+  width: 120px;
+}
+
+#task-input {
+  flex: 1;
+  min-width: 200px;
+}
+
+#date-input {
+  width: 150px;
+}
+
+.add-form button {
+  padding: 6px 14px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.add-form input.invalid {
+  border-color: #d32f2f;
+  outline: none;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-label {
+  font-size: 13px;
+  color: #555;
+  min-width: 48px;
+}
+
+.filter-group {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.filter-group button {
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid #bbb;
+  background: #f5f5f5;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.filter-group button.active {
+  background: #1976d2;
+  border-color: #1976d2;
+  color: #fff;
+}
+
+.task-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  table-layout: fixed;
+}
+
+.task-table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.task-table td.col-check {
+  width: 28px;
+}
+
+.task-table td.col-date {
+  width: 100px;
+}
+
+.task-table td.col-delete {
+  width: 60px;
+  text-align: center;
+}
+
+.task-row.completed td.col-assignee,
+.task-row.completed td.col-task,
+.task-row.completed td.col-date {
+  text-decoration: line-through;
+  color: #999;
+}
+
+.delete-btn {
+  border: none;
+  background: none;
+  color: #d32f2f;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.empty-message {
+  padding: 24px 0;
+  text-align: center;
+  color: #888;
+  font-size: 14px;
+}
+
+/* ---- v1.2 1단계 추가 ---- */
+.due-summary {
+  font-size: 13px;
+  color: #555;
+  margin: -4px 0 12px;
+}
+
+.task-row.due-overdue td.col-date,
+.task-row.due-overdue td.col-task {
+  color: #c62828;
+  font-weight: 600;
+}
+
+.task-row.due-today td.col-date,
+.task-row.due-today td.col-task {
+  color: #b45309;
+  font-weight: 600;
+}
+
+#search-input {
+  flex: 1;
+  min-width: 180px;
+  padding: 6px 8px;
+  font-size: 14px;
+  border: 1px solid #999;
+  border-radius: 4px;
+}
+
+.filter-row > button {
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+dialog {
+  width: min(480px, 90vw);
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.backup-list {
+  max-height: 50vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.backup-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+}
