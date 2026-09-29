@@ -33,3 +33,13 @@ test('sanitizeCsv', () => {
   assert.equal(sanitizeCsv('﻿a,b'), '﻿a,b');
   assert.throws(() => sanitizeCsv(123));
 });
+
+test('sanitizeTasks: 업무 구분 필드 검사(v1.3)', () => {
+  const base = { id: 1, assignee: 'a', task: 'b', date: '2026-09-29', completed: false };
+  assert.doesNotThrow(() => sanitizeTasks([{ ...base, category: 'daily' }]));
+  assert.doesNotThrow(() => sanitizeTasks([{ ...base, category: 'weekly', weekday: 7, completedPeriod: '2026-09-28' }]));
+  assert.doesNotThrow(() => sanitizeTasks([{ ...base, category: 'monthly', monthDay: 31 }]));
+  assert.throws(() => sanitizeTasks([{ ...base, category: 'yearly' }]));
+  assert.throws(() => sanitizeTasks([{ ...base, category: 'weekly', weekday: 0 }]));
+  assert.throws(() => sanitizeTasks([{ ...base, category: 'monthly', monthDay: '5' }]));
+});

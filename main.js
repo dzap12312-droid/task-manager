@@ -64,7 +64,8 @@ function createWindow() {
 
 // 앱 시작 시 1회: 오늘 마감/지연이 있으면 Windows 알림
 function notifyDueOnce(tasks) {
-  const info = Logic.buildDueNotification(Logic.countDue(tasks, Logic.todayLocalDateString()));
+  const today = Logic.todayLocalDateString();
+  const info = Logic.buildDueNotification(Logic.countDue(Logic.toViewTasks(tasks, today), today));
   if (!info || !Notification.isSupported()) return;
   const n = new Notification({ title: info.title, body: info.body, silent: false });
   n.on('click', () => {

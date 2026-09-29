@@ -18,16 +18,19 @@ function localDate(offset) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+const today = localDate(0);
 const SAMPLE = [
-  { id: 1, task: '월간 실적 보고서 제출', assignee: '김민수', date: localDate(-3), completed: false },
-  { id: 2, task: '거래처 견적서 검토', assignee: '이서연', date: localDate(0), completed: false },
-  { id: 3, task: '신규 입사자 교육 자료 준비', assignee: '박지훈', date: localDate(1), completed: false },
-  { id: 4, task: '분기 예산안 초안 작성', assignee: '김민수', date: localDate(3), completed: false },
-  { id: 5, task: '사무용품 발주', assignee: '최유진', date: localDate(12), completed: false },
-  { id: 6, task: '주간 회의록 공유', assignee: '이서연', date: localDate(-1), completed: true, completedAt: localDate(-1) },
+  { id: 1, task: '메일·결재 확인', assignee: '김민수', date: today, completed: true, completedAt: today, completedPeriod: today, category: 'daily' },
+  { id: 2, task: '출고 현황 점검', assignee: '이서연', date: today, completed: false, category: 'daily' },
+  { id: 3, task: '주간 업무 보고', assignee: '김민수', date: '', completed: false, category: 'weekly', weekday: 5 },
+  { id: 4, task: '팀 회의록 공유', assignee: '박지훈', date: '', completed: false, category: 'weekly', weekday: 1 },
+  { id: 5, task: '월말 비용 정산', assignee: '최유진', date: '', completed: false, category: 'monthly', monthDay: 31 },
+  { id: 6, task: '월간 실적 보고서 제출', assignee: '김민수', date: localDate(-3), completed: false },
+  { id: 7, task: '거래처 견적서 검토', assignee: '이서연', date: localDate(1), completed: false },
+  { id: 8, task: '사무용품 발주', assignee: '최유진', date: localDate(12), completed: false },
 ];
 
-async function shoot(theme, width, file, { hoverRow = null } = {}) {
+async function shoot(theme, width, file, { hoverRow = null, tab = null } = {}) {
   const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-manager-shot-'));
   await fs.writeFile(path.join(dataDir, 'tasks.json'), JSON.stringify(SAMPLE, null, 2));
   await fs.writeFile(path.join(dataDir, 'settings.json'), JSON.stringify({ theme }));
@@ -40,9 +43,10 @@ async function shoot(theme, width, file, { hoverRow = null } = {}) {
   await app.evaluate(({ BrowserWindow }, w) => {
     const bw = BrowserWindow.getAllWindows()[0];
     bw.setMinimumSize(300, 300);
-    bw.setContentSize(w, 640);
+    bw.setContentSize(w, 820);
   }, width);
   await win.waitForFunction((w) => window.innerWidth === w, width);
+  if (tab) await win.click(`#category-filter button[data-category="${tab}"]`);
   await win.evaluate(() => document.activeElement && document.activeElement.blur());
   if (hoverRow !== null) await win.locator('.task-row').nth(hoverRow).hover();
   else await win.mouse.move(1, 1);
@@ -55,6 +59,7 @@ async function shoot(theme, width, file, { hoverRow = null } = {}) {
 (async () => {
   await fs.mkdir(OUT, { recursive: true });
   await shoot('light', 900, 'light.png', { hoverRow: 1 });
+  await shoot('light', 900, 'light-weekly.png', { tab: 'weekly' });
   await shoot('dark', 900, 'dark.png', { hoverRow: 1 });
   await shoot('light', 600, 'light-600.png');
   await shoot('dark', 600, 'dark-600.png');

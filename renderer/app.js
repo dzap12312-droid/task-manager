@@ -5,6 +5,11 @@
   const $ = (id) => document.getElementById(id);
 
   const form = $('add-form');
+  const categoryInput = $('category-input');
+  const weekdayInput = $('weekday-input');
+  const monthdayInput = $('monthday-input');
+  const dailyWhen = $('daily-when');
+  const categoryFilterEl = $('category-filter');
   const taskInput = $('task-input');
   const assigneeInput = $('assignee-input');
   const dateInput = $('date-input');
@@ -29,6 +34,8 @@
   const TRANSITION_MS = 150;
 
   let tasks = [];
+  let categoryFilter = 'all';
+  let currentDay = L.todayLocalDateString();
   let statusFilter = 'all';
   let assigneeFilter = 'all';
   let query = '';
@@ -71,17 +78,36 @@
     }
   }
 
+  // 반복 업무는 "이번 기간"의 마감일·완료 여부로 바꿔서 보여 준다(저장값은 그대로).
+  function viewTasks() {
+    return L.toViewTasks(tasks, today());
+  }
+
   function visibleTasks() {
-    return L.filterTasks(L.sortTasks(tasks), { status: statusFilter, assignee: assigneeFilter, query });
+    return L.filterTasks(L.sortTasks(viewTasks()), {
+      category: categoryFilter,
+      status: statusFilter,
+      assignee: assigneeFilter,
+      query,
+    });
   }
 
   // ---- 렌더링 ----
 
   function renderSummary() {
-    const { today: todayCount, overdue } = L.countDue(tasks, today());
+    const view = viewTasks();
+    const { today: todayCount, overdue } = L.countDue(view, today());
     const t = el('span', 'sum-today' + (todayCount ? ' has' : ''), `오늘 ${todayCount}건`);
     const o = el('span', 'sum-overdue' + (overdue ? ' has' : ''), `지연 ${overdue}건`);
     dueSummary.replaceChildren(t, el('span', 'sum-sep', ' / '), o);
+
+    // 구분 탭에 미완료 건수 표시
+    const counts = L.countOpenByCategory(view);
+    for (const btn of categoryFilterEl.querySelectorAll('button[data-category]')) {
+      const n = counts[btn.dataset.category] || 0;
+      btn.querySelector('.count').textContent = n ? String(n) : '';
+      btn.setAttribute('aria-label', `${btn.firstChild.textContent} (미완료 ${n}건)`);
+    }
   }
 
   function renderAssignees() {
@@ -128,9 +154,12 @@
     avatar.title = t.assignee;
     avatar.setAttribute('aria-hidden', 'true');
     meta.append(avatar, el('span', 'assignee-name', t.assignee));
+    const recur = L.recurrenceLabel(t);
+    if (recur) meta.append(el('span', 'recur', recur));
     main.append(title, meta);
 
-    const dueLabel = el('span', 'due-label', L.relativeDateLabel(t.date, todayStr, { completed: t.completed }));
+    const doneText = t.completed ? L.periodDoneLabel(t) : null;
+    const dueLabel = el('span', 'due-label', doneText || L.relativeDateLabel(t.date, todayStr, { completed: t.completed }));
     dueLabel.title = t.completed && t.completedAt ? `마감 ${t.date} · 완료 ${t.completedAt}` : `마감 ${t.date}`;
 
     const del = el('button', 'delete-btn', '삭제');
@@ -156,7 +185,23 @@
 
     emptyMessage.hidden = true;
     listEl.hidden = false;
-    listEl.replaceChildren(...filtered.map((t) => buildRow(t, todayStr)));
+
+    if (categoryFilter !== 'all') {
+      listEl.replaceChildren(...filtered.map((t) => buildRow(t, todayStr)));
+      return;
+    }
+    // 전체 탭: 일일 → 주간 → 월간 → 비정기 순서로 나눠서 보여 준다
+    const nodes = [];
+    for (const cat of L.CATEGORIES) {
+      const group = filtered.filter((t) => t.category === cat);
+      if (group.length === 0) continue;
+      const header = el('li', 'group-header');
+      header.setAttribute('role', 'presentation');
+      header.dataset.category = cat;
+      header.append(el('span', '', L.CATEGORY_LABEL[cat]), el('span', 'group-count', String(group.length)));
+      nodes.push(header, ...group.map((t) => buildRow(t, todayStr)));
+    }
+    listEl.replaceChildren(...nodes);
   }
 
   function renderAll() {
@@ -168,15 +213,15 @@
   // ---- 동작 ----
 
   async function toggleCompleted(id, row) {
-    const t = tasks.find((x) => x.id === id);
-    if (!t) return;
-    t.completed = !t.completed;
-    if (t.completed) t.completedAt = today();
-    else delete t.completedAt;
+    const idx = tasks.findIndex((x) => x.id === id);
+    if (idx < 0) return;
+    const todayStr = today();
+    const done = !L.isCompletedNow(tasks[idx], todayStr);
+    tasks[idx] = L.setCompleted(tasks[idx], done, todayStr);
 
     // 먼저 현재 행에서 흐려짐/취소선 전환(0.15초)을 보여 준 뒤 정렬을 다시 한다.
     if (row) {
-      row.classList.toggle('completed', t.completed);
+      row.classList.toggle('completed', done);
       row.classList.remove('due-overdue', 'due-today');
     }
     renderSummary();
@@ -199,7 +244,7 @@
 
     const task = taskInput.value.trim();
     const assignee = assigneeInput.value.trim();
-    const date = dateInput.value || today();
+    const category = categoryInput.value;
 
     clearInvalid(taskInput, assigneeInput);
     if (!task) {
@@ -212,13 +257,73 @@
     }
 
     const id = L.generateUniqueId(tasks.map((x) => x.id));
-    tasks.push({ id, assignee, task, date, completed: false });
+    const newTask = { id, assignee, task, date: dateInput.value || today(), completed: false };
+    if (category !== 'once') {
+      newTask.category = category;
+      if (category === 'weekly') newTask.weekday = Number(weekdayInput.value);
+      if (category === 'monthly') newTask.monthDay = Number(monthdayInput.value);
+      newTask.date = L.currentDueDate(newTask, today()); // 참고용(화면은 매 기간 새로 계산)
+    }
+    tasks.push(newTask);
     await persist();
 
     taskInput.value = '';
     taskInput.focus();
     renderAll();
   });
+
+  // ---- 업무 구분 ----
+  function fillMonthdayOptions() {
+    const opts = [];
+    for (let d = 1; d <= 31; d += 1) {
+      const opt = el('option', '', d === 31 ? '매월 말일' : `매월 ${d}일`);
+      opt.value = String(d);
+      opts.push(opt);
+    }
+    monthdayInput.replaceChildren(...opts);
+  }
+
+  function resetRecurrenceDefaults() {
+    const t = today();
+    weekdayInput.value = String(L.isoWeekday(t));
+    monthdayInput.value = String(Number(t.slice(8, 10)));
+  }
+
+  function updateWhenControl() {
+    const c = categoryInput.value;
+    dateInput.hidden = c !== 'once';
+    dailyWhen.hidden = c !== 'daily';
+    weekdayInput.hidden = c !== 'weekly';
+    monthdayInput.hidden = c !== 'monthly';
+  }
+
+  categoryInput.addEventListener('change', updateWhenControl);
+
+  categoryFilterEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-category]');
+    if (!btn) return;
+    categoryFilter = btn.dataset.category;
+    for (const b of categoryFilterEl.querySelectorAll('button[data-category]')) {
+      const active = b === btn;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-pressed', String(active));
+    }
+    // 특정 구분 탭에서는 새 업무도 그 구분으로 추가되게 맞춘다
+    if (categoryFilter !== 'all') {
+      categoryInput.value = categoryFilter;
+      updateWhenControl();
+    }
+    renderList();
+  });
+
+  // 앱을 켜 둔 채 날짜가 바뀌면(자정) 반복 업무 완료 표시·마감을 새로 계산
+  setInterval(() => {
+    const now = today();
+    if (now === currentDay) return;
+    currentDay = now;
+    if (!dateInput.value || dateInput.hidden) dateInput.value = now;
+    renderAll();
+  }, 60 * 1000);
 
   for (const input of [taskInput, assigneeInput]) {
     input.addEventListener('input', () => clearInvalid(input));
@@ -367,6 +472,9 @@
 
   async function init() {
     dateInput.value = today();
+    fillMonthdayOptions();
+    resetRecurrenceDefaults();
+    updateWhenControl();
     try {
       const settings = await window.api.getSettings();
       if (THEME_ORDER.includes(settings.theme)) theme = settings.theme;

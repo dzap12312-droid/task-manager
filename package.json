@@ -1,7 +1,7 @@
 {
   "name": "task-manager",
   "productName": "업무관리",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "개인 업무 체크리스트 데스크톱 프로그램",
   "main": "main.js",
   "private": true,

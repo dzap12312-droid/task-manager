@@ -105,7 +105,7 @@ test('마감 표시·요약, 검색, 상태 필터, CSV 내보내기', async () 
   const csv = await fs.readFile(csvPath, 'utf8');
   expect(csv.charCodeAt(0)).toBe(0xfeff);
   const lines = csv.slice(1).trim().split('\r\n');
-  expect(lines[0]).toBe('업무,담당자,날짜,완료여부,완료일');
+  expect(lines[0]).toBe('업무,담당자,날짜,완료여부,완료일,구분');
   expect(lines).toHaveLength(3);
   expect(csv).not.toContain('지난 보고서');
 
@@ -214,7 +214,7 @@ test('2단계: 창 폭 600px에서 입력줄·툴바가 한 줄이고 가로 스
     const top = (sel) => [...document.querySelectorAll(sel)].map((e) => Math.round(e.getBoundingClientRect().top));
     return {
       scrollX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      formTops: new Set(top('#add-form > input, #add-form > button')).size,
+      formTops: new Set(top('#add-form > :not([hidden]):not(datalist)')).size,
       toolbarTops: new Set(top('.toolbar > *')).size,
       rowRight: document.querySelector('.task-row').getBoundingClientRect().right,
       width: document.documentElement.clientWidth,
@@ -224,5 +224,78 @@ test('2단계: 창 폭 600px에서 입력줄·툴바가 한 줄이고 가로 스
   expect(layout.formTops).toBe(1);
   expect(layout.toolbarTops).toBe(1);
   expect(layout.rowRight).toBeLessThanOrEqual(layout.width);
+
+  await win.selectOption('#category-input', 'monthly');
+  const tops = await win.evaluate(() => new Set([...document.querySelectorAll('#add-form > :not([hidden]):not(datalist)')].map((e) => Math.round(e.getBoundingClientRect().top))).size);
+  expect(tops).toBe(1);
+  expect(await win.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
+  await app.close();
+});
+
+test('업무 구분: 일일/주간/월간/비정기 추가, 탭 필터, 전체 탭 묶음, 반복 완료는 기간이 지나면 해제', async () => {
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-manager-e2e-'));
+  const yesterday = localDate(-1);
+  // 어제 완료한 일일업무(오늘은 다시 미완료여야 함) + 기존 방식 데이터
+  await fs.writeFile(
+    path.join(dataDir, 'tasks.json'),
+    JSON.stringify([
+      { id: 1, assignee: '김민수', task: '어제 한 일일업무', date: yesterday, completed: true, completedAt: yesterday, completedPeriod: yesterday, category: 'daily' },
+      { id: 2, assignee: '김민수', task: '기존 비정기 업무', date: localDate(5), completed: false },
+    ]),
+    'utf8',
+  );
+  const { app, win } = await launch(dataDir);
+
+  await expect(win.locator('.task-row', { hasText: '어제 한 일일업무' })).not.toHaveClass(/completed/);
+  await expect(win.locator('.task-row', { hasText: '어제 한 일일업무' }).locator('.recur')).toHaveText('매일');
+
+  // 기본 구분은 비정기(날짜 입력), 주간을 고르면 요일 선택으로 바뀐다
+  await expect(win.locator('#category-input')).toHaveValue('once');
+  await expect(win.locator('#date-input')).toBeVisible();
+  await win.selectOption('#category-input', 'weekly');
+  await expect(win.locator('#date-input')).toBeHidden();
+  await expect(win.locator('#weekday-input')).toBeVisible();
+  await win.selectOption('#weekday-input', '5');
+  await addTask(win, { assignee: '홍길동', task: '주간 회의 자료' });
+  await expect(win.locator('.task-row', { hasText: '주간 회의 자료' }).locator('.recur')).toHaveText('매주 금요일');
+
+  await win.selectOption('#category-input', 'monthly');
+  await expect(win.locator('#monthday-input')).toBeVisible();
+  await win.selectOption('#monthday-input', '31');
+  await addTask(win, { assignee: '홍길동', task: '월말 정산' });
+  await expect(win.locator('.task-row', { hasText: '월말 정산' }).locator('.recur')).toHaveText('매월 말일');
+
+  // 전체 탭: 일일 → 주간 → 월간 → 비정기 순서로 묶어서 표시
+  await expect(win.locator('.group-header')).toHaveText([/일일업무/, /주간업무/, /월간업무/, /비정기업무/]);
+  await expect(win.locator('#category-filter button[data-category="all"] .count')).toHaveText('4');
+
+  // 일일업무 탭: 일일만 보이고, 입력 구분도 일일로 바뀐다
+  await win.click('#category-filter button[data-category="daily"]');
+  await expect(win.locator('.task-row')).toHaveCount(1);
+  await expect(win.locator('.group-header')).toHaveCount(0);
+  await expect(win.locator('#category-input')).toHaveValue('daily');
+  await expect(win.locator('#daily-when')).toBeVisible();
+  await addTask(win, { assignee: '김민수', task: '메일 확인' });
+  await expect(win.locator('.task-row')).toHaveCount(2);
+
+  // 일일업무 완료 → 이번 기간(오늘)으로 저장
+  await win.locator('.task-row', { hasText: '메일 확인' }).locator('.task-check').check();
+  await expect(win.locator('.task-row.completed', { hasText: '메일 확인' })).toHaveCount(1);
+  await expect.poll(async () => (await readTasks(dataDir)).find((t) => t.task === '메일 확인')).toMatchObject({
+    category: 'daily',
+    completed: true,
+    completedPeriod: localDate(0),
+    completedAt: localDate(0),
+  });
+  await expect(win.locator('#category-filter button[data-category="daily"] .count')).toHaveText('1');
+
+  await win.click('#category-filter button[data-category="once"]');
+  await expect(win.locator('.task-row')).toHaveCount(1);
+  await expect(win.locator('.task-row')).toContainText('기존 비정기 업무');
+
+  const saved = await readTasks(dataDir);
+  expect(saved.find((t) => t.task === '주간 회의 자료')).toMatchObject({ category: 'weekly', weekday: 5 });
+  expect(saved.find((t) => t.task === '월말 정산')).toMatchObject({ category: 'monthly', monthDay: 31 });
+  expect('category' in saved.find((t) => t.task === '기존 비정기 업무')).toBe(false);
   await app.close();
 });

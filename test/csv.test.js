@@ -4,11 +4,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { toCsv, csvFileName, CSV_HEADER, filterTasks, sortTasks } = require('../renderer/logic.js');
 
-test('toCsv: UTF-8 BOM으로 시작하고 열 순서가 업무/담당자/날짜/완료여부/완료일', () => {
+test('toCsv: UTF-8 BOM으로 시작하고 열 순서가 업무/담당자/날짜/완료여부/완료일/구분', () => {
   const csv = toCsv([]);
   assert.equal(csv.charCodeAt(0), 0xfeff);
-  assert.equal(csv, '﻿업무,담당자,날짜,완료여부,완료일\r\n');
-  assert.deepEqual(CSV_HEADER, ['업무', '담당자', '날짜', '완료여부', '완료일']);
+  assert.equal(csv, '﻿업무,담당자,날짜,완료여부,완료일,구분\r\n');
+  assert.deepEqual(CSV_HEADER, ['업무', '담당자', '날짜', '완료여부', '완료일', '구분']);
 });
 
 test('toCsv: 완료여부와 완료일', () => {
@@ -18,22 +18,22 @@ test('toCsv: 완료여부와 완료일', () => {
     { id: 3, task: '옛 데이터', assignee: '홍길동', date: '2026-09-01', completed: true },
   ]);
   const lines = csv.slice(1).split('\r\n');
-  assert.equal(lines[1], '보고서,김민수,2026-09-29,완료,2026-09-30');
-  assert.equal(lines[2], '견적,홍길동,2026-10-01,미완료,');
-  assert.equal(lines[3], '옛 데이터,홍길동,2026-09-01,완료,');
+  assert.equal(lines[1], '보고서,김민수,2026-09-29,완료,2026-09-30,비정기업무');
+  assert.equal(lines[2], '견적,홍길동,2026-10-01,미완료,,비정기업무');
+  assert.equal(lines[3], '옛 데이터,홍길동,2026-09-01,완료,,비정기업무');
   assert.equal(lines[4], '');
 });
 
 test('toCsv: 쉼표·따옴표·줄바꿈은 따옴표로 감싸고 따옴표는 두 번 쓴다', () => {
   const csv = toCsv([{ id: 1, task: 'A, "B"\n다음 줄', assignee: '김', date: '2026-09-29', completed: false }]);
   const body = csv.slice(1).split('\r\n').slice(1).join('\r\n');
-  assert.equal(body, '"A, ""B""\n다음 줄",김,2026-09-29,미완료,\r\n');
+  assert.equal(body, '"A, ""B""\n다음 줄",김,2026-09-29,미완료,,비정기업무\r\n');
 });
 
 test('toCsv: 엑셀 수식으로 해석될 값은 앞에 작은따옴표를 붙인다', () => {
   const csv = toCsv([{ id: 1, task: '=HYPERLINK("x")', assignee: '+82', date: '2026-09-29', completed: false }]);
   const line = csv.slice(1).split('\r\n')[1];
-  assert.equal(line, `"'=HYPERLINK(""x"")",'+82,2026-09-29,미완료,`);
+  assert.equal(line, `"'=HYPERLINK(""x"")",'+82,2026-09-29,미완료,,비정기업무`);
 });
 
 test('CSV 내보내기는 현재 필터가 적용된 목록(정렬 포함)을 그대로 쓴다', () => {
@@ -49,4 +49,16 @@ test('CSV 내보내기는 현재 필터가 적용된 목록(정렬 포함)을 �
 
 test('csvFileName', () => {
   assert.equal(csvFileName('2026-09-29'), '업무목록-20260929.csv');
+});
+
+test('toCsv: 반복 업무는 구분 열에 주기를 함께 적는다', () => {
+  const csv = toCsv([
+    { id: 1, task: '메일 확인', assignee: '김', date: '2026-09-29', completed: false, category: 'daily' },
+    { id: 2, task: '주간 회의', assignee: '김', date: '2026-10-02', completed: true, completedAt: '2026-09-29', category: 'weekly', weekday: 5 },
+    { id: 3, task: '마감 정산', assignee: '김', date: '2026-09-30', completed: false, category: 'monthly', monthDay: 31 },
+  ]);
+  const rows = csv.slice(1).trim().split('\r\n').slice(1);
+  assert.equal(rows[0], '메일 확인,김,2026-09-29,미완료,,일일업무(매일)');
+  assert.equal(rows[1], '주간 회의,김,2026-10-02,완료,2026-09-29,주간업무(매주 금요일)');
+  assert.equal(rows[2], '마감 정산,김,2026-09-30,미완료,,월간업무(매월 말일)');
 });
