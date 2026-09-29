@@ -13,6 +13,9 @@ const Logic = require('./renderer/logic');
 const APP_ID = 'com.taeyeon.taskmanager'; // package.json build.appId와 동일(변경 금지: 설치 정보/알림 식별자)
 const openDevTools = process.argv.includes('--devtools');
 
+// 날짜 입력칸 등 기본 UI를 한국어 형식으로 고정(OS 언어와 무관하게 2026. 09. 29. 형식)
+app.commandLine.appendSwitch('lang', 'ko-KR');
+
 // 포터블 exe면 <exe 폴더>\data, 설치형은 %APPDATA%\업무관리
 const legacyDir = app.getPath('userData');
 const dataInfo = resolveDataDir({ env: process.env, userDataPath: legacyDir });

@@ -28,6 +28,8 @@ test('createBackup: 현재 파일을 백업하고, 내용이 같으면 다시 �
   const list = await listBackups(backups);
   assert.deepEqual(list.map((b) => b.name), [second, first]); // 최신순
   assert.deepEqual(list.map((b) => b.count), [2, 1]);
+  assert.equal(list[1].createdAt, '2026-09-29T01-00-00-000Z');
+  assert.equal(list[1].beforeRestore, false);
 });
 
 test('createBackup: tasks.json이 없으면 건너뛴다', async () => {

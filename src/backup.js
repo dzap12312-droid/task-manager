@@ -51,7 +51,7 @@ async function listBackups(backupDir) {
       size: stat.size,
       count,
       beforeRestore: name.endsWith('-before-restore.json'),
-      createdAt: name.slice(6, 29), // 파일명의 시각(UTC) 부분
+      createdAt: name.slice(6, 30), // 파일명의 시각(UTC) 부분: 2026-09-29T01-00-00-000Z
     });
   }
   // 파일명의 시각이 ISO 형식이라 문자열 역순 정렬 = 최신순

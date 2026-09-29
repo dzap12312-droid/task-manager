@@ -125,3 +125,23 @@ test('normalizeTasks: 이상한 항목은 건너뛰고 형식을 맞춘다', () 
   assert.notEqual(out[1].id, 5); // 중복 id는 새 id로
   assert.deepEqual(normalizeTasks({ not: 'array' }), []);
 });
+
+test('assigneeInitial: 한글은 첫 글자, 영문 두 단어는 머리글자 2개', () => {
+  const { assigneeInitial } = require('../renderer/logic.js');
+  assert.equal(assigneeInitial('김민수'), '김');
+  assert.equal(assigneeInitial('alex kim'), 'AK');
+  assert.equal(assigneeInitial('Alex'), 'A');
+  assert.equal(assigneeInitial('  '), '?');
+  assert.equal(assigneeInitial(undefined), '?');
+});
+
+test('assigneeColorIndex: 같은 이름은 항상 같은 색, 0~7 범위', () => {
+  const { assigneeColorIndex } = require('../renderer/logic.js');
+  const names = ['김민수', '홍길동', '이영희', '박지성', 'Alex Kim', '최', ''];
+  for (const n of names) {
+    const i = assigneeColorIndex(n);
+    assert.ok(Number.isInteger(i) && i >= 0 && i < 8);
+    assert.equal(assigneeColorIndex(n), i);
+  }
+  assert.ok(new Set(names.map((n) => assigneeColorIndex(n))).size > 1);
+});

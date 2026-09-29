@@ -3,55 +3,58 @@
 <head>
 <meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" />
+<meta name="color-scheme" content="light dark" />
 <title>업무관리</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>업무관리</h1>
-  <div id="due-summary" class="due-summary" aria-live="polite"></div>
-
-  <form id="add-form" class="add-form" autocomplete="off">
-    <input id="assignee-input" name="assignee" list="assignee-list" placeholder="담당자" />
-    <input id="task-input" name="task" placeholder="업무 내용" />
-    <input id="date-input" name="date" type="date" />
-    <button type="submit">추가</button>
-    <datalist id="assignee-list"></datalist>
-  </form>
-
-  <div class="filter-row">
-    <input id="search-input" type="search" placeholder="업무명·담당자 검색" />
-    <button type="button" id="export-csv">CSV 내보내기</button>
-    <button type="button" id="restore-backup">백업 복원</button>
-  </div>
-  <div class="filter-row">
-    <span class="filter-label">상태:</span>
-    <div id="status-filter" class="filter-group">
-      <button type="button" data-status="all" class="active">전체</button>
-      <button type="button" data-status="incomplete">미완료</button>
-      <button type="button" data-status="completed">완료</button>
+  <header class="app-header">
+    <div class="brand">
+      <h1>업무관리</h1>
+      <div id="due-summary" class="due-summary" aria-live="polite"></div>
     </div>
-  </div>
-  <div class="filter-row">
-    <span class="filter-label">담당자:</span>
-    <div id="assignee-filter" class="filter-group">
-      <button type="button" data-assignee="all" class="active">전체</button>
+    <div class="header-actions">
+      <button type="button" id="export-csv" class="btn btn-ghost" title="지금 보이는 목록을 엑셀용 CSV로 저장">CSV 내보내기</button>
+      <button type="button" id="restore-backup" class="btn btn-ghost" title="자동 백업에서 되살리기">백업 복원</button>
+      <button type="button" id="theme-toggle" class="btn btn-ghost" title="시스템 → 라이트 → 다크 순서로 바뀝니다">테마: 시스템</button>
     </div>
-  </div>
+  </header>
 
-  <div id="empty-message" class="empty-message" hidden></div>
-  <table id="task-table" class="task-table">
-    <tbody id="task-body"></tbody>
-  </table>
+  <main class="container">
+    <form id="add-form" class="add-form" autocomplete="off">
+      <input id="task-input" name="task" class="input" placeholder="업무 입력" aria-label="업무" />
+      <input id="assignee-input" name="assignee" class="input" list="assignee-list" placeholder="담당자" aria-label="담당자" />
+      <input id="date-input" name="date" class="input" type="date" aria-label="마감일" />
+      <button type="submit" class="btn btn-primary">추가</button>
+      <datalist id="assignee-list"></datalist>
+    </form>
 
-  <dialog id="backup-dialog">
+    <div class="toolbar">
+      <div id="status-filter" class="tabs" role="group" aria-label="상태 필터">
+        <button type="button" data-status="all" class="active">전체</button>
+        <button type="button" data-status="incomplete">미완료</button>
+        <button type="button" data-status="completed">완료</button>
+      </div>
+      <select id="assignee-filter" class="input select" aria-label="담당자 필터">
+        <option value="all">전체 담당자</option>
+      </select>
+      <input id="search-input" class="input search" type="search" placeholder="검색 (Ctrl+F)" title="업무명·담당자 검색" aria-label="업무명·담당자 검색" />
+    </div>
+
+    <p id="empty-message" class="empty-message" hidden></p>
+    <ul id="task-list" class="task-list" aria-label="업무 목록"></ul>
+  </main>
+
+  <dialog id="backup-dialog" class="dialog">
     <form method="dialog" id="backup-form">
       <h2>백업 복원</h2>
-      <p>복원할 백업을 선택하세요. 복원 전에 현재 데이터도 자동으로 백업됩니다.</p>
+      <p class="dialog-desc">복원할 백업을 선택하세요. 복원하기 직전의 데이터도 자동으로 백업됩니다.</p>
       <div id="backup-list" class="backup-list"></div>
       <div class="dialog-actions">
-        <button type="button" id="backup-open-folder">백업 폴더 열기</button>
-        <button type="submit" value="cancel">취소</button>
-        <button type="button" id="backup-restore-btn" disabled>복원</button>
+        <button type="button" id="backup-open-folder" class="btn btn-ghost">백업 폴더 열기</button>
+        <span class="spacer"></span>
+        <button type="submit" value="cancel" class="btn">취소</button>
+        <button type="button" id="backup-restore-btn" class="btn btn-primary" disabled>복원</button>
       </div>
     </form>
   </dialog>

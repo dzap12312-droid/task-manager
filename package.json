@@ -9,7 +9,8 @@
     "start": "electron .",
     "test": "node --test test/*.test.js",
     "test:e2e": "playwright test",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "screenshots": "node scripts/screenshots.js"
   },
   "devDependencies": {
     "electron": "44.4.5",
